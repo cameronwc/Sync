@@ -91,6 +91,22 @@
     @apply w-full rounded-lg border border-rule bg-white px-3 py-2 font-body text-sm text-ink;
   }
 
+  /* iOS Safari renders type=date as an intrinsic-width, center-aligned
+     control that ignores width:100% and overflows its container — flatten
+     it into a normal block field. */
+  input[type='date'] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 2.5rem;
+  }
+  input[type='date']::-webkit-date-and-time-value {
+    text-align: left;
+  }
+
   /* Add alongside .field-input on <select> elements for a custom caret. */
   .field-select {
     @apply appearance-none bg-no-repeat pr-8;
