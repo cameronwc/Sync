@@ -55,7 +55,7 @@ export default function RoomCodeInput({ value, onChange, onSubmit }: RoomCodeInp
       placeholder="ABCD-EFGH"
       maxLength={9}
       aria-label="Room code"
-      className="w-full min-w-0 border border-rule bg-white px-3 py-2 font-mono text-lg tracking-wider text-ink placeholder:text-ink/30"
+      className="field-input min-w-0 font-mono text-lg tracking-wider placeholder:text-ink/30"
     />
   )
 }

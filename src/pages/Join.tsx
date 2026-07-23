@@ -55,35 +55,35 @@ export default function Join(): JSX.Element {
   return (
     <div className="min-h-screen">
       <Header />
-      <main className="mx-auto max-w-md px-4 py-10 sm:py-16">
-        <h1 className="mb-1 font-display text-2xl font-bold tracking-tight text-ink">Join with a code</h1>
-        <p className="mb-6 text-sm text-ink/60">Enter the 8-character code your organizer shared.</p>
+      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-16">
+        <div className="max-w-md">
+          <div className="card p-5 sm:p-6">
+            <h1 className="mb-1 font-display text-2xl font-semibold text-ink">Join with a code</h1>
+            <p className="mb-6 text-sm text-ink/60">Enter the 8-character code your organizer shared.</p>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            void handleResolve(code)
-          }}
-          className="space-y-4"
-        >
-          <RoomCodeInput value={code} onChange={setCode} onSubmit={() => void handleResolve(code)} />
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                void handleResolve(code)
+              }}
+              className="space-y-4"
+            >
+              <RoomCodeInput value={code} onChange={setCode} onSubmit={() => void handleResolve(code)} />
 
-          {error && (
-            <div role="alert" className="border border-alert bg-alert/5 px-3 py-2 text-sm text-alert">
-              {error}
-            </div>
-          )}
+              {error && (
+                <div role="alert" className="rounded-lg border border-alert bg-alert/5 px-3 py-2 text-sm text-alert">
+                  {error}
+                </div>
+              )}
 
-          {loading && <p className="font-mono text-xs text-ink/50">Looking up the code…</p>}
+              {loading && <p className="text-sm text-ink/50">Looking up the code…</p>}
 
-          <button
-            type="submit"
-            disabled={loading || !code.trim()}
-            className="w-full bg-signal px-4 py-2.5 font-mono text-sm text-white disabled:opacity-50"
-          >
-            {loading ? 'Looking…' : 'Go'}
-          </button>
-        </form>
+              <button type="submit" disabled={loading || !code.trim()} className="btn-primary w-full">
+                {loading ? 'Looking…' : 'Go'}
+              </button>
+            </form>
+          </div>
+        </div>
       </main>
     </div>
   )

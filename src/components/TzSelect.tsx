@@ -128,7 +128,7 @@ export default function TzSelect({ value, onChange }: TzSelectProps): JSX.Elemen
         }}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex items-center gap-2 border border-rule bg-white px-3 py-1.5 font-mono text-sm text-ink"
+        className="flex items-center gap-2 rounded-lg border border-rule bg-white px-3 py-1.5 font-mono text-sm text-ink transition-colors duration-150 hover:border-ink/30"
       >
         <span>{value}</span>
         <span aria-hidden="true" className="text-ink/50">
@@ -136,7 +136,7 @@ export default function TzSelect({ value, onChange }: TzSelectProps): JSX.Elemen
         </span>
       </button>
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-72 max-w-[90vw] border border-rule bg-white">
+        <div className="absolute right-0 z-20 mt-1 w-72 max-w-[90vw] rounded-lg border border-rule bg-white shadow-sm">
           <input
             ref={inputRef}
             value={query}
@@ -147,10 +147,10 @@ export default function TzSelect({ value, onChange }: TzSelectProps): JSX.Elemen
             onKeyDown={handleInputKeyDown}
             placeholder="Search time zones…"
             aria-label="Search time zones"
-            className="w-full border-b border-rule px-3 py-2 font-mono text-sm text-ink outline-none"
+            className="w-full rounded-t-lg border-b border-rule px-3 py-2 font-mono text-sm text-ink outline-none"
           />
-          <ul role="listbox" className="max-h-64 overflow-y-auto">
-            {filtered.length === 0 && <li className="px-3 py-2 font-mono text-sm text-ink/50">No matches</li>}
+          <ul role="listbox" className="max-h-64 overflow-y-auto p-1">
+            {filtered.length === 0 && <li className="px-2 py-2 font-mono text-sm text-ink/50">No matches</li>}
             {filtered.map((z, i) => (
               <li
                 key={z}
@@ -158,7 +158,7 @@ export default function TzSelect({ value, onChange }: TzSelectProps): JSX.Elemen
                 aria-selected={z === value}
                 onMouseEnter={() => setHighlight(i)}
                 onClick={() => commit(z)}
-                className={`cursor-pointer px-3 py-1.5 font-mono text-sm ${
+                className={`cursor-pointer rounded-md px-2 py-1.5 font-mono text-sm ${
                   i === highlight ? 'bg-signal text-white' : 'text-ink'
                 }`}
               >

@@ -383,25 +383,27 @@ export default function EventPage(): JSX.Element {
     return (
       <div className="min-h-screen">
         <Header />
-        <main className="mx-auto max-w-xl px-4 py-10 sm:py-14">
-          {loadState === 'loading' && <p className="font-mono text-sm text-ink/50">Loading…</p>}
-          {loadState === 'notfound' && (
-            <div className="space-y-3">
-              <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Event not found</h1>
-              <p className="text-sm text-ink/70">
-                We could not find an event at this address. It may have been mistyped or removed.
-              </p>
-              <Link to="/" className="font-mono text-sm text-signal underline">
-                Back to sync
-              </Link>
-            </div>
-          )}
-          {loadState === 'error' && (
-            <div className="space-y-3">
-              <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Something went wrong</h1>
-              <p className="text-sm text-ink/70">{loadError ?? 'Could not load this event. Try again.'}</p>
-            </div>
-          )}
+        <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
+          <div className="max-w-xl">
+            {loadState === 'loading' && <p className="text-sm text-ink/50">Loading…</p>}
+            {loadState === 'notfound' && (
+              <div className="space-y-3">
+                <h1 className="font-display text-2xl font-semibold text-ink">Event not found</h1>
+                <p className="text-sm text-ink/70">
+                  We could not find an event at this address. It may have been mistyped or removed.
+                </p>
+                <Link to="/" className="btn-link">
+                  Back to sync
+                </Link>
+              </div>
+            )}
+            {loadState === 'error' && (
+              <div className="space-y-3">
+                <h1 className="font-display text-2xl font-semibold text-ink">Something went wrong</h1>
+                <p className="text-sm text-ink/70">{loadError ?? 'Could not load this event. Try again.'}</p>
+              </div>
+            )}
+          </div>
         </main>
       </div>
     )
@@ -415,75 +417,56 @@ export default function EventPage(): JSX.Element {
         right={<TzSelect value={viewerTz} onChange={setViewerTz} />}
       />
 
-      {viewerTz !== event.event_tz && (
-        <div className="border-b border-rule bg-white px-4 py-2 text-xs text-ink/70">
-          Grid is <span className="font-mono text-ink">{event.event_tz}</span>. Times shown in{' '}
-          <span className="font-mono text-ink">{viewerTz}</span>.
-        </div>
-      )}
+      <main className="mx-auto max-w-5xl space-y-10 px-4 py-8 sm:px-6">
+        {viewerTz !== event.event_tz && (
+          <div className="inline-block rounded-lg border border-rule bg-white px-4 py-2 text-sm text-ink/70">
+            Grid is <span className="font-mono text-ink">{event.event_tz}</span>. Times shown in{' '}
+            <span className="font-mono text-ink">{viewerTz}</span>.
+          </div>
+        )}
 
-      <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
         {saveError && (
-          <div role="alert" className="border border-alert bg-alert/5 px-3 py-2 text-sm text-alert">
+          <div role="alert" className="rounded-lg border border-alert bg-alert/5 px-3 py-2 text-sm text-alert">
             {saveError}
           </div>
         )}
 
         {finalized && finalizedStart && (
-          <div className="space-y-4 border border-signal bg-signal/5 p-4 sm:p-6">
+          <div className="card space-y-4 p-5 sm:p-6">
             <div>
-              <p className="font-mono text-xs uppercase tracking-wide text-signal">Confirmed</p>
-              <p className="font-mono text-xl text-ink sm:text-2xl">{fmtInstant(finalizedStart, viewerTz)}</p>
+              <p className="font-display text-lg font-semibold text-ink">Confirmed</p>
+              <p className="mt-1 font-mono text-2xl text-ink sm:text-3xl">{fmtInstant(finalizedStart, viewerTz)}</p>
               {viewerTz !== event.event_tz && (
-                <p className="font-mono text-xs text-ink/60">
+                <p className="mt-1 font-mono text-xs text-ink/60">
                   {fmtInstant(finalizedStart, event.event_tz)} in {event.event_tz}
                 </p>
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={handleDownloadIcs}
-                className="border border-ink bg-white px-3 py-2 font-mono text-xs text-ink hover:bg-ink hover:text-ground"
-              >
+              <button type="button" onClick={handleDownloadIcs} className="btn-primary">
                 Download .ics
               </button>
               {googleUrl && (
-                <a
-                  href={googleUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="border border-ink bg-white px-3 py-2 font-mono text-xs text-ink hover:bg-ink hover:text-ground"
-                >
+                <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary">
                   Add to Google Calendar
                 </a>
               )}
               {outlookOfficeUrl && (
-                <a
-                  href={outlookOfficeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="border border-ink bg-white px-3 py-2 font-mono text-xs text-ink hover:bg-ink hover:text-ground"
-                >
+                <a href={outlookOfficeUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary">
                   Add to Outlook
                 </a>
               )}
             </div>
             {outlookLiveUrl && (
-              <a
-                href={outlookLiveUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block font-mono text-xs text-ink/60 underline"
-              >
+              <a href={outlookLiveUrl} target="_blank" rel="noopener noreferrer" className="btn-link text-xs">
                 personal account
               </a>
             )}
-            <p className="text-xs text-ink/50">
+            <p className="text-sm text-ink/50">
               sync does not write to anyone&apos;s calendar. Each person adds it themselves.
             </p>
             {adminMode && (
-              <button type="button" onClick={() => void handleUnfinalize()} className="font-mono text-xs text-alert underline">
+              <button type="button" onClick={() => void handleUnfinalize()} className="btn-link text-xs text-alert">
                 unpick this time
               </button>
             )}
@@ -493,14 +476,18 @@ export default function EventPage(): JSX.Element {
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-4">
             {!finalized && (
-              <div role="radiogroup" aria-label="View mode" className="inline-flex border border-rule">
+              <div
+                role="radiogroup"
+                aria-label="View mode"
+                className="inline-flex overflow-hidden rounded-lg border border-rule"
+              >
                 <button
                   type="button"
                   role="radio"
                   aria-checked={mode === 'edit'}
                   onClick={() => setMode('edit')}
-                  className={`px-4 py-2 font-mono text-xs ${
-                    mode === 'edit' ? 'bg-ink text-ground' : 'bg-white text-ink/70'
+                  className={`px-4 py-2 font-body text-sm font-medium ${
+                    mode === 'edit' ? 'bg-ink text-white' : 'bg-white text-ink/70'
                   }`}
                 >
                   My availability
@@ -510,8 +497,8 @@ export default function EventPage(): JSX.Element {
                   role="radio"
                   aria-checked={mode === 'group'}
                   onClick={() => setMode('group')}
-                  className={`border-l border-rule px-4 py-2 font-mono text-xs ${
-                    mode === 'group' ? 'bg-ink text-ground' : 'bg-white text-ink/70'
+                  className={`border-l border-rule px-4 py-2 font-body text-sm font-medium ${
+                    mode === 'group' ? 'bg-ink text-white' : 'bg-white text-ink/70'
                   }`}
                 >
                   Group
@@ -520,27 +507,27 @@ export default function EventPage(): JSX.Element {
             )}
 
             {mode === 'group' && !finalized && (
-              <p className="text-xs text-ink/50">
+              <p className="text-sm text-ink/50">
                 Group view is read-only. Switch to My availability to paint your times.
               </p>
             )}
 
             {identity && (
-              <div className="flex items-center gap-2 text-xs text-ink/60">
+              <div className="flex items-center gap-2 text-sm text-ink/60">
                 <span>
                   Editing as <span className="font-mono text-ink">{identity.name}</span>
                 </span>
-                <button type="button" onClick={handleNotMe} className="underline">
+                <button type="button" onClick={handleNotMe} className="btn-link text-xs">
                   not you?
                 </button>
               </div>
             )}
 
             {showJoinCard && (
-              <div className="space-y-3 border border-rule bg-white p-4">
+              <div className="card space-y-3 p-4 sm:p-5">
                 <p className="text-sm text-ink/70">Add your name to start marking your availability.</p>
                 {joinError && (
-                  <div role="alert" className="border border-alert bg-alert/5 px-3 py-2 text-sm text-alert">
+                  <div role="alert" className="rounded-lg border border-alert bg-alert/5 px-3 py-2 text-sm text-alert">
                     {joinError}
                   </div>
                 )}
@@ -551,12 +538,12 @@ export default function EventPage(): JSX.Element {
                     onChange={(e) => setJoinName(e.target.value)}
                     placeholder="Your name"
                     aria-label="Your name"
-                    className="flex-1 border border-rule bg-white px-3 py-2 text-sm text-ink"
+                    className="field-input flex-1"
                   />
                   <button
                     type="submit"
                     disabled={joining || !joinName.trim()}
-                    className="shrink-0 bg-signal px-4 py-2 font-mono text-sm text-white disabled:opacity-50"
+                    className="btn-primary shrink-0"
                   >
                     {joining ? 'Saving…' : `Save availability as ${joinName.trim() || '…'}`}
                   </button>

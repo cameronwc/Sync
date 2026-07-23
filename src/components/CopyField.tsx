@@ -48,7 +48,7 @@ export default function CopyField({ label, value, large }: CopyFieldProps): JSX.
 
   return (
     <div>
-      <label className="mb-1 block font-mono text-xs uppercase tracking-wide text-ink/60">{label}</label>
+      <label className="field-label">{label}</label>
       <div className="flex items-stretch gap-2">
         <input
           ref={inputRef}
@@ -56,16 +56,9 @@ export default function CopyField({ label, value, large }: CopyFieldProps): JSX.
           readOnly
           value={value}
           onFocus={(e) => e.currentTarget.select()}
-          className={`min-w-0 flex-1 border border-rule bg-white px-3 py-2 font-mono text-ink ${
-            large ? 'text-2xl sm:text-3xl' : 'text-sm'
-          }`}
+          className={`field-input min-w-0 flex-1 font-mono ${large ? 'text-3xl sm:text-4xl' : 'text-sm'}`}
         />
-        <button
-          type="button"
-          onClick={handleCopy}
-          aria-label={`Copy ${label}`}
-          className="shrink-0 border border-rule bg-white px-3 py-2 font-mono text-sm text-ink transition-colors hover:border-signal hover:bg-signal hover:text-white"
-        >
+        <button type="button" onClick={handleCopy} aria-label={`Copy ${label}`} className="btn-secondary shrink-0">
           {copied ? 'Copied' : 'Copy'}
         </button>
       </div>

@@ -390,13 +390,13 @@ export default function Grid(props: GridProps): JSX.Element {
   function renderCell(day: number, slotOfDay: number, hourStart: boolean, colIdx: number) {
     const info = grid.get(day)?.[slotOfDay]
     const key = cellKey(day, slotOfDay)
-    const borderTop = hourStart ? 'border-t-2 border-t-ink/30' : 'border-t border-t-rule'
+    const borderTop = hourStart ? 'border-t-2 border-t-ink/20' : 'border-t border-t-rule/50'
     if (!info) {
       return (
         <div
           key={key}
           style={{ gridColumn: colIdx + 2, gridRow: slotOfDay + 2 }}
-          className={`border-l border-rule bg-ground ${borderTop}`}
+          className={`border-l border-rule bg-white ${borderTop}`}
         />
       )
     }
@@ -414,13 +414,17 @@ export default function Grid(props: GridProps): JSX.Element {
 
     let bgStyle: string | undefined
     let bgClass = ''
+    let isFullOverlap = false
     if (isNonexistent) {
-      bgClass = 'bg-hatched bg-ground'
+      bgClass = 'bg-hatched bg-white'
     } else if (mode === 'edit') {
       bgClass = isFree ? 'bg-signal' : 'bg-white'
     } else {
       const alpha = stat && totalParticipants > 0 ? stat.count / totalParticipants : 0
-      bgStyle = `rgba(14,124,134,${alpha})`
+      bgStyle = `rgba(217,119,87,${alpha})`
+      // Full-overlap cells (everyone free) pop slightly with a crisp inset
+      // border of the full signal color.
+      isFullOverlap = !!stat && totalParticipants > 0 && stat.count === totalParticipants
     }
 
     return (
@@ -470,6 +474,7 @@ export default function Grid(props: GridProps): JSX.Element {
             {vLabel!.dayDelta > 0 ? '+1' : '-1'}
           </span>
         )}
+        {isFullOverlap && <div className="pointer-events-none absolute inset-0 border border-signal" />}
         {mode === 'group' && !isNonexistent && stat && totalParticipants > 0 && (
           <div className="pointer-events-none absolute left-1/2 top-full z-30 mt-1 hidden -translate-x-1/2 whitespace-nowrap border border-ink/30 bg-ink px-2 py-1 font-mono text-[11px] text-ground group-hover:block group-focus:block">
             <div className="text-ground/70">{timeLabel}</div>
@@ -487,7 +492,7 @@ export default function Grid(props: GridProps): JSX.Element {
 
   if (days.length === 0) {
     return (
-      <div className="border border-rule bg-ground p-4 text-sm text-ink/60">
+      <div className="rounded-lg border border-rule bg-white p-4 text-sm text-ink/60">
         No days enabled for this event.
       </div>
     )
@@ -521,7 +526,7 @@ export default function Grid(props: GridProps): JSX.Element {
           <div className="absolute -left-1 -right-1 bottom-0 h-0.5 bg-ink" />
           {chipText && (
             <div
-              className="absolute left-0 top-0 z-30 max-w-[13rem] -translate-y-[70%] truncate bg-ink px-1.5 py-0.5 font-mono text-[10px] font-semibold text-ground"
+              className="absolute left-0 top-0 z-30 max-w-[13rem] -translate-y-[70%] truncate rounded-md bg-ink px-1.5 py-0.5 font-mono text-[10px] font-semibold text-white"
               title={chipText}
             >
               {chipText}
@@ -533,73 +538,78 @@ export default function Grid(props: GridProps): JSX.Element {
   }
 
   return (
-    <div className="w-full overflow-x-auto">
-      <div
-        ref={gridRef}
-        role="grid"
-        aria-rowcount={slotsPerDayCount + 1}
-        aria-colcount={days.length + 1}
-        aria-label="Availability grid"
-        className="grid select-none bg-ground"
-        style={{
-          gridTemplateColumns: `3.5rem repeat(${days.length}, minmax(0, 1fr))`,
-          gridAutoRows: 'minmax(2rem, auto)',
-          minWidth: `calc(3.5rem + ${days.length * 3}rem)`,
-          touchAction: mode === 'edit' ? 'none' : undefined,
-        }}
-        onPointerMove={handlePointerMove}
-        onFocus={handleContainerFocus}
-        onBlur={handleContainerBlur}
-      >
-        <div role="row" className="contents">
-          <div
-            role="columnheader"
-            aria-hidden="true"
-            style={{ gridColumn: 1, gridRow: 1 }}
-            className="border-b border-rule bg-ground"
-          />
-          {days.map((day, i) => (
+    // Rounded white plotting surface, sitting on the ivory page ground that
+    // shows around it — overflow-hidden here clips to the rounded corners;
+    // the scrollable region is a separate inner layer so it doesn't fight that.
+    <div className="w-full overflow-hidden rounded-lg border border-rule bg-white">
+      <div className="overflow-x-auto">
+        <div
+          ref={gridRef}
+          role="grid"
+          aria-rowcount={slotsPerDayCount + 1}
+          aria-colcount={days.length + 1}
+          aria-label="Availability grid"
+          className="grid select-none bg-white"
+          style={{
+            gridTemplateColumns: `3.5rem repeat(${days.length}, minmax(0, 1fr))`,
+            gridAutoRows: 'minmax(2rem, auto)',
+            minWidth: `calc(3.5rem + ${days.length * 3}rem)`,
+            touchAction: mode === 'edit' ? 'none' : undefined,
+          }}
+          onPointerMove={handlePointerMove}
+          onFocus={handleContainerFocus}
+          onBlur={handleContainerBlur}
+        >
+          <div role="row" className="contents">
             <div
-              key={`h-${day}`}
               role="columnheader"
-              style={{ gridColumn: i + 2, gridRow: 1 }}
-              className="border-b border-l border-rule bg-ground px-1 py-1.5 text-center font-mono text-[11px] font-semibold uppercase tracking-wide text-ink"
-            >
-              {eventDayLabel(cfg, day)}
-            </div>
-          ))}
-        </div>
-
-        {Array.from({ length: slotsPerDayCount }, (_, slotOfDay) => {
-          const hourStart = isHourBoundary(cfg, slotOfDay)
-          const gutterInfo = grid.get(days[0])?.[slotOfDay]
-          const gutterLabel = gutterInfo ? viewerLabels.get(gutterInfo.index) : undefined
-          return (
-            <div role="row" className="contents" key={`r-${slotOfDay}`}>
+              aria-hidden="true"
+              style={{ gridColumn: 1, gridRow: 1 }}
+              className="border-b border-rule bg-white"
+            />
+            {days.map((day, i) => (
               <div
-                role="rowheader"
-                style={{ gridColumn: 1, gridRow: slotOfDay + 2 }}
-                className={`flex items-start justify-end bg-ground pr-1.5 pt-0.5 font-mono text-[10px] text-ink/70 ${
-                  hourStart ? 'border-t-2 border-t-ink/30' : 'border-t border-t-rule'
-                }`}
+                key={`h-${day}`}
+                role="columnheader"
+                style={{ gridColumn: i + 2, gridRow: 1 }}
+                className="border-b border-l border-rule bg-white px-1 py-1.5 text-center font-body text-xs font-medium text-ink/70"
               >
-                {hourStart && gutterLabel && (
-                  <span className="inline-flex items-baseline gap-0.5">
-                    {gutterLabel.time}
-                    {gutterLabel.dayDelta !== 0 && (
-                      <sup className="text-[8px] text-ink/50">
-                        {gutterLabel.dayDelta > 0 ? '+1' : '-1'}
-                      </sup>
-                    )}
-                  </span>
-                )}
+                {eventDayLabel(cfg, day)}
               </div>
-              {days.map((day, colIdx) => renderCell(day, slotOfDay, hourStart, colIdx))}
-            </div>
-          )
-        })}
+            ))}
+          </div>
 
-        {ribbonNode}
+          {Array.from({ length: slotsPerDayCount }, (_, slotOfDay) => {
+            const hourStart = isHourBoundary(cfg, slotOfDay)
+            const gutterInfo = grid.get(days[0])?.[slotOfDay]
+            const gutterLabel = gutterInfo ? viewerLabels.get(gutterInfo.index) : undefined
+            return (
+              <div role="row" className="contents" key={`r-${slotOfDay}`}>
+                <div
+                  role="rowheader"
+                  style={{ gridColumn: 1, gridRow: slotOfDay + 2 }}
+                  className={`flex items-start justify-end bg-white pr-1.5 pt-0.5 font-mono text-[11px] text-ink/50 ${
+                    hourStart ? 'border-t-2 border-t-ink/20' : 'border-t border-t-rule/50'
+                  }`}
+                >
+                  {hourStart && gutterLabel && (
+                    <span className="inline-flex items-baseline gap-0.5">
+                      {gutterLabel.time}
+                      {gutterLabel.dayDelta !== 0 && (
+                        <sup className="text-[8px] text-ink/50">
+                          {gutterLabel.dayDelta > 0 ? '+1' : '-1'}
+                        </sup>
+                      )}
+                    </span>
+                  )}
+                </div>
+                {days.map((day, colIdx) => renderCell(day, slotOfDay, hourStart, colIdx))}
+              </div>
+            )
+          })}
+
+          {ribbonNode}
+        </div>
       </div>
     </div>
   )

@@ -102,185 +102,173 @@ export default function Landing(): JSX.Element {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-xl px-4 py-10 sm:py-14">
-      <div className="mb-10">
-        <h1 className="font-display text-4xl font-bold tracking-[-0.03em] text-ink sm:text-5xl">sync</h1>
-        <p className="mt-1 font-mono text-xs uppercase tracking-[0.12em] text-ink/60 sm:text-sm">
-          SCHEDULE YOUR NEXT CALL
-        </p>
-      </div>
+    <main className="mx-auto min-h-screen max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
+      <div className="max-w-xl">
+        <div className="mb-10 sm:mb-12">
+          <h1 className="font-display text-[3.5rem] font-semibold leading-none text-ink">sync</h1>
+          <p className="mt-3 font-body text-ink/60">Schedule your next call.</p>
+        </div>
 
-      <section className="mb-10 border border-rule bg-white p-4">
-        <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-tight text-ink">
-          Join with a code
-        </h2>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <RoomCodeInput value={joinCode} onChange={setJoinCode} onSubmit={handleJoinSubmit} />
-          <button
-            type="button"
-            onClick={handleJoinSubmit}
-            disabled={!joinCode.trim()}
-            className="shrink-0 border border-ink bg-ink px-4 py-2 font-mono text-sm text-ground disabled:opacity-40"
-          >
-            Join
+        <section className="card mb-10 p-4 sm:mb-12 sm:p-5">
+          <h2 className="mb-3 font-display text-lg font-semibold text-ink">Join with a code</h2>
+          <div className="flex flex-row items-stretch gap-2">
+            <RoomCodeInput value={joinCode} onChange={setJoinCode} onSubmit={handleJoinSubmit} />
+            <button type="button" onClick={handleJoinSubmit} disabled={!joinCode.trim()} className="btn-primary shrink-0">
+              Join
+            </button>
+          </div>
+        </section>
+
+        <form onSubmit={handleSubmit} className="card space-y-6 p-4 sm:p-6">
+          <h2 className="font-display text-lg font-semibold text-ink">Create an event</h2>
+
+          {error && (
+            <div role="alert" className="rounded-lg border border-alert bg-alert/5 px-3 py-2 text-sm text-alert">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label htmlFor="title" className="field-label">
+              Title
+            </label>
+            <input
+              id="title"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Q3 planning sync"
+              className="field-input"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="organizer" className="field-label">
+              Your name
+            </label>
+            <input
+              id="organizer"
+              type="text"
+              value={organizerName}
+              onChange={(e) => setOrganizerName(e.target.value)}
+              placeholder="Jordan"
+              className="field-input"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="week" className="field-label">
+              Target week
+            </label>
+            <input
+              id="week"
+              type="date"
+              value={pickedDate}
+              onChange={(e) => setPickedDate(e.target.value || nextMonday())}
+              className="field-input font-mono"
+            />
+            <p className="mt-1.5 font-mono text-xs text-ink/50">Week of Mon {weekStart}</p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="duration" className="field-label">
+                Meeting duration
+              </label>
+              <select
+                id="duration"
+                value={duration}
+                onChange={(e) => setDuration(Number(e.target.value))}
+                className="field-input field-select font-mono"
+              >
+                {DURATION_OPTIONS.map((d) => (
+                  <option key={d} value={d}>
+                    {d} min
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="slot" className="field-label">
+                Slot granularity
+              </label>
+              <select
+                id="slot"
+                value={slotMinutes}
+                onChange={(e) => setSlotMinutes(Number(e.target.value))}
+                className="field-input field-select font-mono"
+              >
+                {SLOT_OPTIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {s} min
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <span className="field-label">Daily window</span>
+            <div className="grid grid-cols-2 gap-3">
+              <select
+                aria-label="Window start"
+                value={dayStart}
+                onChange={(e) => setDayStart(Number(e.target.value))}
+                className="field-input field-select font-mono"
+              >
+                {TIME_OPTIONS.map((t) => (
+                  <option key={t} value={t}>
+                    {timeLabel(t)}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Window end"
+                value={dayEnd}
+                onChange={(e) => setDayEnd(Number(e.target.value))}
+                className="field-input field-select font-mono"
+              >
+                {TIME_OPTIONS.map((t) => (
+                  <option key={t} value={t}>
+                    {timeLabel(t)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <span className="field-label">Days of week</span>
+            <div role="group" aria-label="Days of week" className="grid grid-cols-7 gap-1.5">
+              {DAY_LABELS.map((label, i) => {
+                const active = daysEnabled.includes(i)
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => toggleDay(i)}
+                    className={`rounded-full border py-1.5 text-center font-mono text-xs transition-colors duration-150 ${
+                      active ? 'border-signal bg-signal text-white' : 'border-rule bg-white text-ink/70'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <p className="text-sm text-ink/60">
+            Event time zone: <span className="font-mono text-ink">{viewerTz}</span> (your current zone)
+          </p>
+
+          <button type="submit" disabled={submitting} className="btn-primary w-full">
+            {submitting ? 'Creating…' : 'Create event'}
           </button>
-        </div>
-      </section>
-
-      <form onSubmit={handleSubmit} className="space-y-6 border border-rule bg-white p-4 sm:p-6">
-        <h2 className="font-display text-sm font-bold uppercase tracking-tight text-ink">
-          Create an event
-        </h2>
-
-        {error && (
-          <div role="alert" className="border border-alert bg-alert/5 px-3 py-2 text-sm text-alert">
-            {error}
-          </div>
-        )}
-
-        <div>
-          <label htmlFor="title" className="mb-1 block font-mono text-xs uppercase tracking-wide text-ink/60">
-            Title
-          </label>
-          <input
-            id="title"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Q3 planning sync"
-            className="w-full border border-rule bg-white px-3 py-2 text-sm text-ink"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="organizer" className="mb-1 block font-mono text-xs uppercase tracking-wide text-ink/60">
-            Your name
-          </label>
-          <input
-            id="organizer"
-            type="text"
-            value={organizerName}
-            onChange={(e) => setOrganizerName(e.target.value)}
-            placeholder="Jordan"
-            className="w-full border border-rule bg-white px-3 py-2 text-sm text-ink"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="week" className="mb-1 block font-mono text-xs uppercase tracking-wide text-ink/60">
-            Target week
-          </label>
-          <input
-            id="week"
-            type="date"
-            value={pickedDate}
-            onChange={(e) => setPickedDate(e.target.value || nextMonday())}
-            className="w-full border border-rule bg-white px-3 py-2 font-mono text-sm text-ink"
-          />
-          <p className="mt-1 font-mono text-xs text-ink/50">Week of Mon {weekStart}</p>
-        </div>
-
-        <div>
-          <label htmlFor="duration" className="mb-1 block font-mono text-xs uppercase tracking-wide text-ink/60">
-            Meeting duration
-          </label>
-          <select
-            id="duration"
-            value={duration}
-            onChange={(e) => setDuration(Number(e.target.value))}
-            className="w-full border border-rule bg-white px-3 py-2 font-mono text-sm text-ink"
-          >
-            {DURATION_OPTIONS.map((d) => (
-              <option key={d} value={d}>
-                {d} min
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <span className="mb-1 block font-mono text-xs uppercase tracking-wide text-ink/60">Daily window</span>
-          <div className="flex items-center gap-2">
-            <select
-              aria-label="Window start"
-              value={dayStart}
-              onChange={(e) => setDayStart(Number(e.target.value))}
-              className="w-full border border-rule bg-white px-3 py-2 font-mono text-sm text-ink"
-            >
-              {TIME_OPTIONS.map((t) => (
-                <option key={t} value={t}>
-                  {timeLabel(t)}
-                </option>
-              ))}
-            </select>
-            <span className="text-ink/40">–</span>
-            <select
-              aria-label="Window end"
-              value={dayEnd}
-              onChange={(e) => setDayEnd(Number(e.target.value))}
-              className="w-full border border-rule bg-white px-3 py-2 font-mono text-sm text-ink"
-            >
-              {TIME_OPTIONS.map((t) => (
-                <option key={t} value={t}>
-                  {timeLabel(t)}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label htmlFor="slot" className="mb-1 block font-mono text-xs uppercase tracking-wide text-ink/60">
-            Slot granularity
-          </label>
-          <select
-            id="slot"
-            value={slotMinutes}
-            onChange={(e) => setSlotMinutes(Number(e.target.value))}
-            className="w-full border border-rule bg-white px-3 py-2 font-mono text-sm text-ink"
-          >
-            {SLOT_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {s} min
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <span className="mb-1 block font-mono text-xs uppercase tracking-wide text-ink/60">Days of week</span>
-          <div role="group" aria-label="Days of week" className="flex flex-wrap gap-2">
-            {DAY_LABELS.map((label, i) => {
-              const active = daysEnabled.includes(i)
-              return (
-                <button
-                  key={label}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => toggleDay(i)}
-                  className={`border px-3 py-1.5 font-mono text-xs ${
-                    active ? 'border-signal bg-signal text-white' : 'border-rule bg-white text-ink/70'
-                  }`}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <p className="font-mono text-xs text-ink/50">
-          Event time zone: <span className="text-ink">{viewerTz}</span> (your current zone)
-        </p>
-
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full bg-signal px-4 py-2.5 font-mono text-sm text-white disabled:opacity-50"
-        >
-          {submitting ? 'Creating…' : 'Create event'}
-        </button>
-      </form>
+        </form>
+      </div>
     </main>
   )
 }
