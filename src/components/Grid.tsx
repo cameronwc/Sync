@@ -572,9 +572,11 @@ export default function Grid(props: GridProps): JSX.Element {
                 key={`h-${day}`}
                 role="columnheader"
                 style={{ gridColumn: i + 2, gridRow: 1 }}
-                className="border-b border-l border-rule bg-white px-1 py-1.5 text-center font-body text-xs font-medium text-ink/70"
+                className="whitespace-nowrap border-b border-l border-rule bg-white px-1 py-1.5 text-center font-body text-xs font-medium text-ink/70"
               >
-                {eventDayLabel(cfg, day)}
+                {/* "Mon 27 Jul" needs three words of room; below sm the month wraps ugly, so show "Mon 27". */}
+                <span className="hidden sm:inline">{eventDayLabel(cfg, day)}</span>
+                <span className="sm:hidden">{eventDayLabel(cfg, day).split(' ').slice(0, 2).join(' ')}</span>
               </div>
             ))}
           </div>
