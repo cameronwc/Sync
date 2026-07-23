@@ -119,6 +119,14 @@ export default function Grid(props: GridProps): JSX.Element {
   const [hasDomFocus, setHasDomFocus] = useState(false)
   const [hoverCell, setHoverCell] = useState<CellPos | null>(null)
   const [drag, setDrag] = useState<DragState | null>(null)
+  // React state lags DOM events by a render: pointermove/pointerup can fire
+  // before setDrag commits, so a fast drag would drop moves and never commit.
+  // The ref is the synchronous source of truth; state only drives the preview.
+  const dragRef = useRef<DragState | null>(null)
+  const onChangeRef = useRef(onChange)
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
 
   // Keep focus/anchor valid if the enabled days or slot count changes under us.
   useEffect(() => {
@@ -132,6 +140,7 @@ export default function Grid(props: GridProps): JSX.Element {
   }, [days, slotsPerDayCount])
 
   useEffect(() => {
+    dragRef.current = null
     setDrag(null)
     setHoverCell(null)
   }, [mode])
@@ -203,20 +212,36 @@ export default function Grid(props: GridProps): JSX.Element {
       shiftFillRef.current = null
       const fillValue = !mySlots.has(info.index)
       const base = new Set(mySlots)
-      setDrag({
+      const state: DragState = {
         anchor,
         paintValue: fillValue,
         base,
         slots: computeRectangleResult(base, anchor, anchor, fillValue),
-      })
+      }
+      dragRef.current = state
+      setDrag(state)
       gridRef.current?.setPointerCapture(e.pointerId)
+      // Attach commit listeners NOW, not in an effect after the next render —
+      // a drag that ends within the same frame must still commit.
+      const finish = (): void => {
+        document.removeEventListener('pointerup', finish)
+        document.removeEventListener('pointercancel', finish)
+        const d = dragRef.current
+        if (!d) return
+        dragRef.current = null
+        setDrag(null)
+        onChangeRef.current(d.slots)
+      }
+      document.addEventListener('pointerup', finish)
+      document.addEventListener('pointercancel', finish)
     },
     [mode, grid, mySlots, anchorPos, applyRectangle, computeRectangleResult],
   )
 
   const handlePointerMove = useCallback(
     (e: RPointerEvent<HTMLDivElement>) => {
-      if (!drag) return
+      const prev = dragRef.current
+      if (!prev) return
       // elementFromPoint (not the sampled move event's own target) so fast or
       // batched pointermove events still resolve a real cell; the resulting
       // rectangle between drag.anchor and this cell is what gets painted, not
@@ -228,27 +253,15 @@ export default function Grid(props: GridProps): JSX.Element {
       const day = Number(cellEl.dataset.day)
       const slotOfDay = Number(cellEl.dataset.slot)
       if (Number.isNaN(day) || Number.isNaN(slotOfDay)) return
-      setDrag((prev) => {
-        if (!prev) return prev
-        return { ...prev, slots: computeRectangleResult(prev.base, prev.anchor, { day, slotOfDay }, prev.paintValue) }
-      })
+      const next: DragState = {
+        ...prev,
+        slots: computeRectangleResult(prev.base, prev.anchor, { day, slotOfDay }, prev.paintValue),
+      }
+      dragRef.current = next
+      setDrag(next)
     },
-    [drag, computeRectangleResult],
+    [computeRectangleResult],
   )
-
-  useEffect(() => {
-    if (!drag) return
-    const finish = () => {
-      onChange(drag.slots)
-      setDrag(null)
-    }
-    document.addEventListener('pointerup', finish)
-    document.addEventListener('pointercancel', finish)
-    return () => {
-      document.removeEventListener('pointerup', finish)
-      document.removeEventListener('pointercancel', finish)
-    }
-  }, [drag, onChange])
 
   const handleKeyDown = useCallback(
     (e: RKeyboardEvent<HTMLDivElement>) => {
