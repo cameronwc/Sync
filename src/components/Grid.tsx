@@ -27,7 +27,10 @@ interface CellPos {
 }
 
 interface DragState {
+  anchor: CellPos
   paintValue: boolean
+  /** mySlots as it was when the drag began — the preview is recomputed as base ± rectangle each move, never cumulative. */
+  base: Set<number>
   slots: Set<number>
 }
 
@@ -135,16 +138,22 @@ export default function Grid(props: GridProps): JSX.Element {
 
   const effectiveSlots = drag ? drag.slots : mySlots
 
-  const applyRectangle = useCallback(
-    (anchor: CellPos, current: CellPos, fillValue: boolean) => {
+  // Applies fillValue to every cell in the rectangle spanned by anchor..current
+  // (inclusive on both axes, skipping nonexistent slots) on top of `base`,
+  // returning a new Set. Shared by shift-click/Shift+Arrow (base = mySlots,
+  // committed immediately) and drag-paint (base = pre-drag snapshot, recomputed
+  // fresh on every pointermove so the live preview never drifts from a single
+  // rectangle relative to where the drag started).
+  const computeRectangleResult = useCallback(
+    (base: Set<number>, anchor: CellPos, current: CellPos, fillValue: boolean): Set<number> => {
       const dIdxA = days.indexOf(anchor.day)
       const dIdxB = days.indexOf(current.day)
-      if (dIdxA === -1 || dIdxB === -1) return
+      if (dIdxA === -1 || dIdxB === -1) return base
       const dMin = Math.min(dIdxA, dIdxB)
       const dMax = Math.max(dIdxA, dIdxB)
       const rMin = Math.min(anchor.slotOfDay, current.slotOfDay)
       const rMax = Math.max(anchor.slotOfDay, current.slotOfDay)
-      const next = new Set(mySlots)
+      const next = new Set(base)
       for (let di = dMin; di <= dMax; di++) {
         const col = grid.get(days[di])
         if (!col) continue
@@ -155,9 +164,16 @@ export default function Grid(props: GridProps): JSX.Element {
           else next.delete(info.index)
         }
       }
-      onChange(next)
+      return next
     },
-    [days, grid, mySlots, onChange],
+    [days, grid],
+  )
+
+  const applyRectangle = useCallback(
+    (anchor: CellPos, current: CellPos, fillValue: boolean) => {
+      onChange(computeRectangleResult(mySlots, anchor, current, fillValue))
+    },
+    [mySlots, onChange, computeRectangleResult],
   )
 
   const handlePointerDown = useCallback(
@@ -182,39 +198,42 @@ export default function Grid(props: GridProps): JSX.Element {
         applyRectangle(anchorPos, { day, slotOfDay }, fillValue)
         return
       }
-      setAnchorPos({ day, slotOfDay })
+      const anchor: CellPos = { day, slotOfDay }
+      setAnchorPos(anchor)
       shiftFillRef.current = null
       const fillValue = !mySlots.has(info.index)
-      const draft = new Set(mySlots)
-      if (fillValue) draft.add(info.index)
-      else draft.delete(info.index)
-      setDrag({ paintValue: fillValue, slots: draft })
+      const base = new Set(mySlots)
+      setDrag({
+        anchor,
+        paintValue: fillValue,
+        base,
+        slots: computeRectangleResult(base, anchor, anchor, fillValue),
+      })
       gridRef.current?.setPointerCapture(e.pointerId)
     },
-    [mode, grid, mySlots, anchorPos, applyRectangle],
+    [mode, grid, mySlots, anchorPos, applyRectangle, computeRectangleResult],
   )
 
   const handlePointerMove = useCallback(
     (e: RPointerEvent<HTMLDivElement>) => {
       if (!drag) return
+      // elementFromPoint (not the sampled move event's own target) so fast or
+      // batched pointermove events still resolve a real cell; the resulting
+      // rectangle between drag.anchor and this cell is what gets painted, not
+      // just the individual sampled cell, so skipped-over cells during a fast
+      // drag are still filled.
       const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null
       const cellEl = el?.closest<HTMLElement>('[data-index]')
       if (!cellEl) return
       const day = Number(cellEl.dataset.day)
       const slotOfDay = Number(cellEl.dataset.slot)
-      if (cellEl.dataset.status === 'nonexistent') return
-      const info = grid.get(day)?.[slotOfDay]
-      if (!info) return
+      if (Number.isNaN(day) || Number.isNaN(slotOfDay)) return
       setDrag((prev) => {
         if (!prev) return prev
-        if (prev.slots.has(info.index) === prev.paintValue) return prev
-        const next = new Set(prev.slots)
-        if (prev.paintValue) next.add(info.index)
-        else next.delete(info.index)
-        return { ...prev, slots: next }
+        return { ...prev, slots: computeRectangleResult(prev.base, prev.anchor, { day, slotOfDay }, prev.paintValue) }
       })
     },
-    [drag, grid],
+    [drag, computeRectangleResult],
   )
 
   useEffect(() => {
@@ -315,7 +334,8 @@ export default function Grid(props: GridProps): JSX.Element {
     mode === 'group' ? hoverCell ?? (hasDomFocus ? focusPos : null) : null
 
   const windowInfo: WindowInfo | null = useMemo(() => {
-    if (!activeRibbonCell) return null
+    // Nothing to summarize with zero participants — suppress the ribbon entirely.
+    if (!activeRibbonCell || participantSlotSets.length === 0) return null
     const col = grid.get(activeRibbonCell.day)
     if (!col) return null
     const idxs: number[] = []
@@ -437,7 +457,7 @@ export default function Grid(props: GridProps): JSX.Element {
             {vLabel!.dayDelta > 0 ? '+1' : '-1'}
           </span>
         )}
-        {mode === 'group' && !isNonexistent && stat && (
+        {mode === 'group' && !isNonexistent && stat && totalParticipants > 0 && (
           <div className="pointer-events-none absolute left-1/2 top-full z-30 mt-1 hidden -translate-x-1/2 whitespace-nowrap border border-ink/30 bg-ink px-2 py-1 font-mono text-[11px] text-ground group-hover:block group-focus:block">
             <div className="text-ground/70">{timeLabel}</div>
             <div>
@@ -461,11 +481,17 @@ export default function Grid(props: GridProps): JSX.Element {
   }
 
   let ribbonNode: JSX.Element | null = null
-  let infoPanelNode: JSX.Element | null = null
   if (windowInfo) {
     const colIdx = days.indexOf(windowInfo.day)
     if (colIdx !== -1) {
       const rowStart = windowInfo.slotOfDay + 2
+      // Invalid (spans a DST-gap slot) windows get a dimmed bracket with no
+      // chip — a count would be meaningless there.
+      const chipText = windowInfo.invalid
+        ? null
+        : windowInfo.missing.length > 0
+          ? `${windowInfo.count}/${windowInfo.total} · missing: ${windowInfo.missing.join(', ')}`
+          : `${windowInfo.count}/${windowInfo.total} · everyone free`
       ribbonNode = (
         <div
           aria-hidden="true"
@@ -480,30 +506,12 @@ export default function Grid(props: GridProps): JSX.Element {
           <div className="absolute inset-y-0 right-0 w-0.5 bg-ink" />
           <div className="absolute -left-1 -right-1 top-0 h-0.5 bg-ink" />
           <div className="absolute -left-1 -right-1 bottom-0 h-0.5 bg-ink" />
-        </div>
-      )
-      infoPanelNode = (
-        <div
-          aria-hidden="true"
-          className="pointer-events-none relative z-20"
-          style={{ gridColumn: 1, gridRow: `${rowStart} / span 1` }}
-        >
-          <div
-            className="absolute right-0 top-0 w-14 truncate bg-ground/95 pl-0.5 text-right font-mono text-[10px] font-semibold text-ink"
-            title={
-              windowInfo.invalid
-                ? 'This window spans an hour that does not exist (clock change).'
-                : `${windowInfo.count}/${windowInfo.total} free for the full window`
-            }
-          >
-            {windowInfo.invalid ? '—' : `${windowInfo.count}/${windowInfo.total}`}
-          </div>
-          {!windowInfo.invalid && windowInfo.missing.length > 0 && (
+          {chipText && (
             <div
-              className="absolute right-0 top-[11px] w-14 truncate bg-ground/95 pl-0.5 text-right font-mono text-[9px] text-alert"
-              title={windowInfo.missing.join(', ')}
+              className="absolute left-0 top-0 z-30 max-w-[13rem] -translate-y-[70%] truncate bg-ink px-1.5 py-0.5 font-mono text-[10px] font-semibold text-ground"
+              title={chipText}
             >
-              {windowInfo.missing.join(', ')}
+              {chipText}
             </div>
           )}
         </div>
@@ -522,7 +530,7 @@ export default function Grid(props: GridProps): JSX.Element {
         className="grid select-none bg-ground"
         style={{
           gridTemplateColumns: `3.5rem repeat(${days.length}, minmax(0, 1fr))`,
-          gridAutoRows: 'minmax(1.5rem, auto)',
+          gridAutoRows: 'minmax(2rem, auto)',
           minWidth: `calc(3.5rem + ${days.length * 3}rem)`,
           touchAction: mode === 'edit' ? 'none' : undefined,
         }}
@@ -579,7 +587,6 @@ export default function Grid(props: GridProps): JSX.Element {
         })}
 
         {ribbonNode}
-        {infoPanelNode}
       </div>
     </div>
   )

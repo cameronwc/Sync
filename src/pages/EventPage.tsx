@@ -45,7 +45,9 @@ export default function EventPage(): JSX.Element {
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [mySlots, setMySlots] = useState<Set<number>>(new Set())
-  const [mode, setMode] = useState<'edit' | 'group'>(() => (identity ? 'edit' : 'group'))
+  // Default to 'edit' regardless of identity: a fresh visitor should meet the
+  // join prompt first, not a read-only grid with no explanation.
+  const [mode, setMode] = useState<'edit' | 'group'>('edit')
 
   const [joinName, setJoinName] = useState('')
   const [joining, setJoining] = useState(false)
@@ -245,6 +247,10 @@ export default function EventPage(): JSX.Element {
 
   const adminMode = Boolean(adminToken)
   const effectiveMode: 'edit' | 'group' = finalized ? 'group' : mode
+  // Join prompt shows when the visitor picked "My availability" but hasn't joined yet.
+  const showJoinCard = effectiveMode === 'edit' && !identity
+  // The grid itself is only truly interactive once there's an identity to save under.
+  const gridMode: 'edit' | 'group' = effectiveMode === 'edit' && identity ? 'edit' : 'group'
 
   function commitSlots(next: Set<number>): void {
     mySlotsRef.current = next
@@ -513,6 +519,12 @@ export default function EventPage(): JSX.Element {
               </div>
             )}
 
+            {mode === 'group' && !finalized && (
+              <p className="text-xs text-ink/50">
+                Group view is read-only. Switch to My availability to paint your times.
+              </p>
+            )}
+
             {identity && (
               <div className="flex items-center gap-2 text-xs text-ink/60">
                 <span>
@@ -524,7 +536,7 @@ export default function EventPage(): JSX.Element {
               </div>
             )}
 
-            {effectiveMode === 'edit' && !identity && (
+            {showJoinCard && (
               <div className="space-y-3 border border-rule bg-white p-4">
                 <p className="text-sm text-ink/70">Add your name to start marking your availability.</p>
                 {joinError && (
@@ -552,21 +564,24 @@ export default function EventPage(): JSX.Element {
               </div>
             )}
 
-            {effectiveMode === 'edit' && identity && !finalized && (
+            {gridMode === 'edit' && !finalized && (
               <ImportPanel cfg={cfg} table={table} mySlots={mySlots} onApply={commitSlots} disabled={finalized} />
             )}
 
-            {(effectiveMode === 'group' || identity) && (
+            {/* The grid is never hidden: while the join card is up (no identity, "My
+                availability" tab), it still renders underneath in dimmed, read-only
+                group mode so a fresh visitor sees what they're about to join. */}
+            <div className={showJoinCard ? 'pointer-events-none opacity-60' : undefined}>
               <Grid
                 cfg={cfg}
                 table={table}
                 viewerTz={viewerTz}
-                mode={effectiveMode}
+                mode={gridMode}
                 mySlots={mySlots}
-                onChange={effectiveMode === 'edit' ? commitSlots : () => {}}
+                onChange={gridMode === 'edit' ? commitSlots : () => {}}
                 participants={participants}
               />
-            )}
+            </div>
           </div>
 
           <div>
